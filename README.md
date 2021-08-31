@@ -30,7 +30,32 @@
 │   ├── gibbs-gaussian.ipynb
 │   ├── kalman-smoothing.ipynb
 │   └── mcmc_gmm_demo.ipynb
-└── 2021-06
-    ├── dishonest_casino.ipynb
-    └── parallel_kalman_filter.ipynb
+├── 2021-06
+│   ├── dishonest_casino.ipynb
+│   ├── extended-kalman-filter.ipynb
+│   ├── mix_gauss_vb.ipynb
+│   ├── nlds_lib.py
+│   ├── parallel_kalman_filter.ipynb
+│   ├── pyprobml_utils.py
+│   ├── ukf-ekf-mlp.ipynb
+│   ├── unscented-kalman-filter.ipynb
+│   └── variational_mixture_gaussians.py
+├── 2021-07
+│   ├── bayesian-cart.ipynb
+│   ├── example1_graph.png
+│   ├── gpr_demo_marlik.ipynb
+│   ├── knn_tpu.ipynb
+│   ├── linreg_sel.ipynb
+│   ├── nlds_lib.py
+│   ├── particle-filtering.ipynb
+│   └── uni_gauss_vb.ipynb
+├── 2021-08
+│   ├── adf-ekf-logistic-regression.ipynb
+│   ├── bootstrap-filter-maneuver.ipynb
+│   ├── gsoc-analysis.ipynb
+│   ├── gsoc-presentation.ipynb
+│   ├── imagenette_clip_logreg_demo.ipynb
+│   └── qmul-repo-analysis.ipynb
+└── README.md
+13 directories, 63 files
 ```
