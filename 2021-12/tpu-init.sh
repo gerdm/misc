@@ -1,3 +1,4 @@
+# https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 pip install "jax[tpu]>=0.2.16" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 pip install -Uq "tfp-nightly[jax]" 
 conda install -c conda-forge gh
