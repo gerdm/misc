@@ -24,6 +24,11 @@ class NonMarkovianSM:
         self.q = q
         self.r = r
     
+    @staticmethod
+    def _obtain_weights(log_weights):
+        weights = jnp.exp(log_weights - jax.nn.logsumexp(log_weights))
+        return weights
+
     def sample_latent_step(self, key, x_prev):
         x_next = jax.random.normal(key) * jnp.sqrt(self.q) + self.phi * x_prev
         return x_next
@@ -145,12 +150,21 @@ class NonMarkovianSM:
         return log_weights
     
     def _smc_step(self, key, log_weights_prev, mu_prev, xparticles_prev, yobs):
-        key_particles = jax.random.split(key, len(xparticles_prev))
+        n_particles = len(xparticles_prev)
+        # key_particles = jax.random.split(key, n_particles)
         
-        
-        # 1. Sample from proposal
-        xparticles = jax.vmap(self.sample_latent_step)(key_particles, xparticles_prev)
-        ...
+        # 1. Resample particles
+        weights = self._obtain_weights(log_weights_prev)
+        ix_sampled = jax.random.choice(key, n_particles, p=weights, shape=(n_particles,))
+        # 2. Propagate particles
+        xparticles_prev_sampled = xparticles_prev[ix_sampled]
+        # 3. Concatenate
+        mu = self.beta * mu_prev + xparticles_prev_sampled
+
+        # ToDo: return dictionary of log_weights and sampled indices
+        log_weights = norm.logpdf(yobs, loc=mu, scale=jnp.sqrt(self.q))
+        return (log_weights, mu, xparticles_prev_sampled), log_weights
+
     
     def sequential_monte_carlo(self, key, observations, n_particles=10):
         """
@@ -161,7 +175,7 @@ class NonMarkovianSM:
         key, key_particle_init = jax.random.split(key)
         keys = jax.random.split(key, T)
         
-        init_xparticles = jax.random.normal(key_init_particles, shape=(n_particles,)) * jnp.sqrt(self.q)
+        init_xparticles = jax.random.normal(key_particle_init, shape=(n_particles,)) * jnp.sqrt(self.q)
         init_log_weights = jnp.zeros(n_particles) # equiv. ∀n.wn=1.0
         init_mu = jnp.zeros(n_particles)
         
