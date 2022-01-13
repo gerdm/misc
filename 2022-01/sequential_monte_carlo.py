@@ -151,19 +151,26 @@ class NonMarkovianSM:
     
     def _smc_step(self, key, log_weights_prev, mu_prev, xparticles_prev, yobs):
         n_particles = len(xparticles_prev)
-        # key_particles = jax.random.split(key, n_particles)
+        key, key_particles = jax.random.split(key)
+        key_particles = jax.random.split(key_particles, n_particles)
         
         # 1. Resample particles
         weights = self._obtain_weights(log_weights_prev)
         ix_sampled = jax.random.choice(key, n_particles, p=weights, shape=(n_particles,))
-        # 2. Propagate particles
         xparticles_prev_sampled = xparticles_prev[ix_sampled]
+        mu_prev_sampled = mu_prev[ix_sampled]
+        # 2. Propagate particles
+        xparticles = jax.vmap(self.sample_latent_step)(key_particles, xparticles_prev)
         # 3. Concatenate
-        mu = self.beta * mu_prev + xparticles_prev_sampled
+        mu = self.beta * mu_prev_sampled + xparticles
 
         # ToDo: return dictionary of log_weights and sampled indices
         log_weights = norm.logpdf(yobs, loc=mu, scale=jnp.sqrt(self.q))
-        return (log_weights, mu, xparticles_prev_sampled), log_weights
+        dict_carry = {
+            "log_weights": log_weights,
+            "indices": ix_sampled
+        }
+        return (log_weights, mu, xparticles_prev_sampled), dict_carry
 
     
     def sequential_monte_carlo(self, key, observations, n_particles=10):
@@ -181,7 +188,7 @@ class NonMarkovianSM:
         
         carry_init = (init_log_weights, init_mu, init_xparticles)
         xs_tuple = (keys, observations)
-        _, log_weights = jax.lax.scan(lambda carry, xs: self._smc_step(xs[0], *carry, xs[1]), carry_init, xs_tuple)
+        _, dict_hist = jax.lax.scan(lambda carry, xs: self._smc_step(xs[0], *carry, xs[1]), carry_init, xs_tuple)
         
-        return log_weights
+        return dict_hist
     
