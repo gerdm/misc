@@ -160,7 +160,7 @@ class NonMarkovianSM:
         xparticles_prev_sampled = xparticles_prev[ix_sampled]
         mu_prev_sampled = mu_prev[ix_sampled]
         # 2. Propagate particles
-        xparticles = jax.vmap(self.sample_latent_step)(key_particles, xparticles_prev)
+        xparticles = jax.vmap(self.sample_latent_step)(key_particles, xparticles_prev_sampled)
         # 3. Concatenate
         mu = self.beta * mu_prev_sampled + xparticles
 
@@ -189,6 +189,8 @@ class NonMarkovianSM:
         carry_init = (init_log_weights, init_mu, init_xparticles)
         xs_tuple = (keys, observations)
         _, dict_hist = jax.lax.scan(lambda carry, xs: self._smc_step(xs[0], *carry, xs[1]), carry_init, xs_tuple)
+        # transform log-unnormalised weights to weights
+        dict_hist["weights"] = jnp.exp(dict_hist["log_weights"] - jax.nn.logsumexp(dict_hist["log_weights"], axis=1, keepdims=True))
         
         return dict_hist
     
