@@ -290,4 +290,64 @@ plt.suptitle("Classical Bayesian Baseline (DGP is HMM, model assumes single mean
 plt.savefig("figures/bayesian-baseline.png", dpi=300, bbox_inches="tight")
 plt.close()
 
+# ---------------------------------------------------------------------------
+# BOCD-like baseline with known changepoints (oracle resets)
+# ---------------------------------------------------------------------------
+
+# Build changepoint flags from the true regime sequence.
+# We mark t=0 and every time state_t != state_{t-1}.
+changepoints = jnp.concatenate(
+    [jnp.array([0]), jnp.where(jnp.diff(states) != 0)[0] + 1]
+)
+is_changepoint = jnp.zeros(n_steps, dtype=bool).at[changepoints].set(True)
+
+def update_bocd_oracle_step(carry, xs):
+    mean_prev, var_prev = carry
+    obs_t, cp_t = xs
+
+    mean_start = jnp.where(cp_t, mean_prior, mean_prev)
+    var_start = jnp.where(cp_t, var_prior, var_prev)
+
+    mean_upd, var_upd = update_gauss(obs_t, mean_start, var_start, obs_var)
+    return (mean_upd, var_upd), (mean_upd, var_upd)
+
+(_, _), (means_bocd, vars_bocd) = jax.lax.scan(
+    update_bocd_oracle_step,
+    (mean_prior, var_prior),
+    (obs, is_changepoint),
+)
+
+# Plot 9: BOCD-like known changepoint baseline
+fig, axs = plt.subplots(2, 1, sharex=True, sharey=True)
+
+plt.sca(axs[0])
+plt.scatter(timesteps, obs, c="black", label="$y_t$", s=3)
+plt.plot(means.at[states].get(), c="darkorange", linewidth=2, label=r"$\theta_{z_t}$ (true)")
+for cp in changepoints[1:]:
+    plt.axvline(cp, color="gray", alpha=0.25, linewidth=1)
+plt.ylabel("$y_t$")
+plt.legend()
+plt.grid(alpha=0.3)
+plt.ylim(-3, 3)
+plt.xlim(0, 230)
+
+plt.sca(axs[1])
+ubounds_bocd = means_bocd + 2 * jnp.sqrt(vars_bocd)
+lbounds_bocd = means_bocd - 2 * jnp.sqrt(vars_bocd)
+plt.plot(means_bocd, linewidth=2, label=r"$\mathbb{E}[\theta \mid \mathcal{Y}_t]$ (oracle reset)")
+plt.fill_between(timesteps, lbounds_bocd, ubounds_bocd, alpha=0.3)
+for cp in changepoints[1:]:
+    plt.axvline(cp, color="gray", alpha=0.25, linewidth=1)
+
+plt.xlim(0, 230)
+plt.ylim(-3, 3)
+plt.xlabel("timestep ($t$)")
+plt.ylabel("Estimates")
+plt.legend()
+plt.grid(alpha=0.3)
+
+plt.suptitle("Kknown changepoints, reset posterior")
+plt.savefig("figures/bocd-oracle-baseline.png", dpi=300, bbox_inches="tight")
+plt.close()
+
 print("All figures saved to ./figures/")
